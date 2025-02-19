@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Menu, Trash } from "lucide-react";
+import api from "./services/api";
 
 export default function UploadForm() {
   const [file, setFile] = useState(null);
@@ -15,10 +16,8 @@ export default function UploadForm() {
 
   const fetchFiles = async () => {
     try {
-      const response = await fetch("http://localhost:3000/files");
-      if (!response.ok) throw new Error("Erro ao buscar arquivos");
-      const data = await response.json();
-      setFiles(data);
+      const response = await api.get("/files");
+      setFiles(response.data);
     } catch (error) {
       console.error("Erro ao buscar arquivos:", error);
     }
@@ -36,13 +35,7 @@ export default function UploadForm() {
     formData.append("fileName", fileName);
 
     try {
-      const response = await fetch("http://localhost:3000/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Erro ao enviar arquivo");
-      await response.json();
+      await api.post("/upload", formData);
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
       fetchFiles();
@@ -55,13 +48,7 @@ export default function UploadForm() {
     if (!window.confirm(`Tem certeza que deseja excluir "${filename}"?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/files/${filename}`, {
-        method: "DELETE",
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Erro ao excluir arquivo");
-
+      await api.delete(`/files/${filename}`);
       setDeleteMessage({ type: "success", text: "Arquivo excluído com sucesso!" });
       fetchFiles();
     } catch (error) {
