@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Trash } from "lucide-react";
 
 export default function UploadForm() {
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState(null);
   const [files, setFiles] = useState([]);
   const [menuOpen, setMenuOpen] = useState(true);
 
@@ -15,6 +16,7 @@ export default function UploadForm() {
   const fetchFiles = async () => {
     try {
       const response = await fetch("http://localhost:3000/files");
+      if (!response.ok) throw new Error("Erro ao buscar arquivos");
       const data = await response.json();
       setFiles(data);
     } catch (error) {
@@ -39,39 +41,71 @@ export default function UploadForm() {
         body: formData,
       });
 
-      const result = await response.json();
-      console.log("Resposta do servidor:", result);
+      if (!response.ok) throw new Error("Erro ao enviar arquivo");
+      await response.json();
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
-      fetchFiles(); // Atualiza a lista de arquivos após o upload
+      fetchFiles();
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
     }
   };
 
+  const handleDelete = async (filename) => {
+    if (!window.confirm(`Tem certeza que deseja excluir "${filename}"?`)) return;
+
+    try {
+      const response = await fetch(`http://localhost:3000/files/${filename}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Erro ao excluir arquivo");
+
+      setDeleteMessage({ type: "success", text: "Arquivo excluído com sucesso!" });
+      fetchFiles();
+    } catch (error) {
+      setDeleteMessage({ type: "error", text: error.message });
+    }
+
+    setTimeout(() => setDeleteMessage(null), 3000);
+  };
+
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
       {/* Menu lateral */}
-      {menuOpen && (
-        <div className="w-64 bg-gray-800 p-5 overflow-y-auto max-h-screen">
-          <h2 className="text-xl font-bold mb-4">Arquivos Enviados</h2>
-          <ul className="overflow-auto max-h-96">
-            {files.map((file, index) => (
-              <li key={index} className="mb-2 border-b border-gray-700 pb-2 px-2 py-1">
-                {file.filename}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
-      {/* Formulário de Upload */}
-      <div className="flex-1 flex flex-col justify-center items-center relative">
+      <div className={`transition-all duration-300 ${menuOpen ? "w-64" : "w-16"} bg-gray-800 p-5 overflow-y-auto max-h-screen`}>
         <button 
           onClick={() => setMenuOpen(!menuOpen)} 
-          className="absolute top-5 left-5 bg-blue-500 p-2 rounded-lg hover:bg-blue-600">
+          className="bg-blue-500 p-2 rounded-lg hover:bg-blue-600 mb-4">
           <Menu size={24} />
         </button>
+        {menuOpen && (
+          <>
+            <h2 className="text-xl font-bold mb-4">Arquivos Enviados</h2>
+            <ul className="overflow-auto max-h-96">
+              {files.length > 0 ? (
+                files.map((file, index) => (
+                  <li key={index} className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 px-2 py-1">
+                    <span>{file.filename}</span>
+                    <button
+                      onClick={() => handleDelete(file.filename)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash size={18} />
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <p className="text-gray-400">Nenhum arquivo enviado.</p>
+              )}
+            </ul>
+          </>
+        )}
+      </div>
+      
+      {/* Formulário de Upload */}
+      <div className="flex-1 flex flex-col justify-center items-center">
         <form
           onSubmit={handleSubmit}
           className="bg-gray-800 p-6 rounded-lg shadow-lg w-96"
@@ -103,6 +137,12 @@ export default function UploadForm() {
             <p className="text-green-500 text-center mt-3">Arquivo enviado com sucesso!</p>
           )}
         </form>
+
+        {deleteMessage && (
+          <p className={`mt-4 ${deleteMessage.type === "success" ? "text-green-500" : "text-red-500"}`}>
+            {deleteMessage.text}
+          </p>
+        )}
       </div>
     </div>
   );
