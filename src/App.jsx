@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Menu, Trash } from "lucide-react";
+import api from "./api"; // Importe a instância do Axios
 
 export default function UploadForm() {
   const [file, setFile] = useState(null);
@@ -15,10 +16,8 @@ export default function UploadForm() {
 
   const fetchFiles = async () => {
     try {
-      const response = await fetch("http://localhost:3000/files");
-      if (!response.ok) throw new Error("Erro ao buscar arquivos");
-      const data = await response.json();
-      setFiles(data);
+      const response = await api.get("/files"); // Use a instância do Axios
+      setFiles(response.data);
     } catch (error) {
       console.error("Erro ao buscar arquivos:", error);
     }
@@ -30,19 +29,11 @@ export default function UploadForm() {
       alert("Por favor, preencha o nome do arquivo e selecione um arquivo.");
       return;
     }
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("fileName", fileName);
-
     try {
-      const response = await fetch("http://localhost:3000/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Erro ao enviar arquivo");
-      await response.json();
+      const response = await api.post("/upload", formData); // Use a instância do Axios
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
       fetchFiles();
@@ -53,21 +44,13 @@ export default function UploadForm() {
 
   const handleDelete = async (filename) => {
     if (!window.confirm(`Tem certeza que deseja excluir "${filename}"?`)) return;
-
     try {
-      const response = await fetch(`http://localhost:3000/files/${filename}`, {
-        method: "DELETE",
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Erro ao excluir arquivo");
-
+      const response = await api.delete(`/files/${filename}`); // Use a instância do Axios
       setDeleteMessage({ type: "success", text: "Arquivo excluído com sucesso!" });
       fetchFiles();
     } catch (error) {
       setDeleteMessage({ type: "error", text: error.message });
     }
-
     setTimeout(() => setDeleteMessage(null), 3000);
   };
 
@@ -111,7 +94,6 @@ export default function UploadForm() {
           className="bg-gray-800 p-6 rounded-lg shadow-lg w-96"
         >
           <h2 className="text-center text-xl font-bold mb-4">File Upload</h2>
-
           <input
             type="text"
             placeholder="Nome do arquivo"
@@ -119,25 +101,21 @@ export default function UploadForm() {
             onChange={(e) => setFileName(e.target.value)}
             className="w-full p-2 mb-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-
           <input
             type="file"
             onChange={(e) => setFile(e.target.files[0])}
             className="w-full p-2 mb-3 bg-gray-700 border border-gray-600 rounded-lg cursor-pointer file:bg-blue-500 file:border-0 file:text-white file:px-4 file:py-2 file:rounded-md hover:file:bg-blue-600"
           />
-
           <button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg"
           >
             Enviar Arquivo
           </button>
-
           {uploadSuccess && (
             <p className="text-green-500 text-center mt-3">Arquivo enviado com sucesso!</p>
           )}
         </form>
-
         {deleteMessage && (
           <p className={`mt-4 ${deleteMessage.type === "success" ? "text-green-500" : "text-red-500"}`}>
             {deleteMessage.text}
