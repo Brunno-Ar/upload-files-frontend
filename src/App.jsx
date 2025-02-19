@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Menu, Trash } from "lucide-react";
+import api from "./api"; // Importe a instância do Axios
+
 
 export default function UploadForm() {
   const [file, setFile] = useState(null);
@@ -15,7 +17,7 @@ export default function UploadForm() {
 
   const fetchFiles = async () => {
     try {
-      const response = await fetch("http://localhost:3000/files");
+      const response = await await api.get("/files");
       if (!response.ok) throw new Error("Erro ao buscar arquivos");
       const data = await response.json();
       setFiles(data);
@@ -36,11 +38,12 @@ export default function UploadForm() {
     formData.append("fileName", fileName);
 
     try {
-      const response = await fetch("http://localhost:3000/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const response = await api.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data", // Definir o Content-Type para multipart/form-data
+        },
+      }); // Use a instância do Axios
+      
       if (!response.ok) throw new Error("Erro ao enviar arquivo");
       await response.json();
       setUploadSuccess(true);
@@ -55,9 +58,9 @@ export default function UploadForm() {
     if (!window.confirm(`Tem certeza que deseja excluir "${filename}"?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/files/${filename}`, {
-        method: "DELETE",
-      });
+      const response = await api.delete(`/files/${filename}`); // Use a instância do Axios
+      setDeleteMessage({ type: "success", text: "Arquivo excluído com sucesso!" });
+      fetchFiles();
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Erro ao excluir arquivo");
